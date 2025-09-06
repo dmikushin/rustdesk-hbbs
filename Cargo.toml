@@ -4,15 +4,6 @@ version = "1.1.14"
 authors = ["rustdesk <info@rustdesk.com>"]
 edition = "2021"
 build = "build.rs"
-default-run = "hbbs"
-
-[[bin]]
-name = "hbbr"
-path = "src/hbbr.rs"
-
-[[bin]]
-name = "rustdesk-utils"
-path = "src/utils.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -64,7 +55,6 @@ hbb_common = { path = "libs/hbb_common" }
 
 [workspace]
 members = ["libs/hbb_common"]
-exclude = ["ui"]
 
 #https://github.com/johnthagen/min-sized-rust
 #https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles
@@ -73,5 +63,14 @@ lto = true
 codegen-units = 1
 panic = 'abort'
 strip = true
-#opt-level = 'z' # only have smaller size after strip # Default is 3, better performance
-#rpath = true # Not needed
+opt-level = 'z' # Optimize for size
+
+# Static linking configuration
+[target.x86_64-unknown-linux-musl]
+rustflags = ["-C", "link-arg=-static"]
+
+[target.x86_64-pc-windows-gnu]
+rustflags = ["-C", "link-arg=-static-libgcc", "-C", "link-arg=-static-libstdc++"]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/SUBSYSTEM:CONSOLE", "-C", "link-arg=/MT"]
