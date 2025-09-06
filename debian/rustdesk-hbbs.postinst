@@ -1,0 +1,41 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Create system user for rustdesk-server if it doesn't exist
+        if ! getent passwd rustdesk >/dev/null 2>&1; then
+            adduser --system --group --home /var/lib/rustdesk-server \
+                --no-create-home --disabled-login --quiet rustdesk
+        fi
+
+        # Set ownership for directories
+        chown -R rustdesk:rustdesk /var/lib/rustdesk-server
+        chown -R rustdesk:rustdesk /var/log/rustdesk-server
+
+        # Set permissions
+        chmod 755 /var/lib/rustdesk-server
+        chmod 755 /var/log/rustdesk-server
+
+        # Reload systemd
+        if [ -d /run/systemd/system ]; then
+            systemctl daemon-reload || true
+        fi
+
+        echo "RustDesk HBBS server installed successfully."
+        echo "To start the service, run: systemctl start rustdesk-hbbs"
+        echo "To enable auto-start on boot: systemctl enable rustdesk-hbbs"
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

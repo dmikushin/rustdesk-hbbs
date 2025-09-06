@@ -1,0 +1,8 @@
+rustdesk-hbbs (1.1.14-1) unstable; urgency=medium
+
+  * Initial release of standalone HBBS package
+  * Static binary compilation with musl
+  * Systemd service included
+  * Removed hbbr and utils components
+
+ -- RustDesk <info@rustdesk.com>  Fri, 06 Sep 2024 14:00:00 +0000

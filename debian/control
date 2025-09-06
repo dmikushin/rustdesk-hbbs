@@ -1,0 +1,25 @@
+Source: rustdesk-hbbs
+Section: net
+Priority: optional
+Maintainer: RustDesk <info@rustdesk.com>
+Build-Depends: debhelper (>= 10),
+               rustc,
+               cargo,
+               musl-tools
+Standards-Version: 4.5.0
+Homepage: https://github.com/rustdesk/rustdesk-server
+Rules-Requires-Root: no
+
+Package: rustdesk-hbbs
+Architecture: amd64
+Depends: ${misc:Depends}
+Recommends: systemd
+Description: RustDesk ID/Rendezvous Server (HBBS)
+ RustDesk HBBS is the ID/Rendezvous server component of RustDesk,
+ a remote desktop software. It handles:
+ - User registration and authentication
+ - Connection establishment between RustDesk clients
+ - NAT traversal assistance
+ .
+ This package provides a statically linked binary that runs on port 21116
+ by default and includes a systemd service for easy deployment.
