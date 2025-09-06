@@ -1,3 +1,12 @@
+rustdesk-hbbs (1.1.14-2) unstable; urgency=medium
+
+  * Add --ip option to force IPv4-only or IPv6-only binding
+  * Add --bind-addr option to bind to specific IP address
+  * Fix IPv6-only binding issue on some systems
+  * Enhanced network binding logging
+
+ -- RustDesk <info@rustdesk.com>  Fri, 06 Dec 2024 15:00:00 +0000
+
 rustdesk-hbbs (1.1.14-1) unstable; urgency=medium
 
   * Initial release of standalone HBBS package

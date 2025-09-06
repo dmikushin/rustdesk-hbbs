@@ -1307,20 +1307,121 @@ async fn send_rk_res(
 }
 
 async fn create_udp_listener(port: i32, rmem: usize) -> ResultType<FramedSocket> {
-    let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port as _);
-    if let Ok(s) = FramedSocket::new_reuse(&addr, true, rmem).await {
-        log::debug!("listen on udp {:?}", s.local_addr());
+    // Check command line flags
+    let ip_version = crate::common::get_arg("ip");
+    let force_ipv4 = ip_version == "4";
+    let force_ipv6 = ip_version == "6"; 
+    let bind_addr = crate::common::get_arg("bind-addr");
+    
+    
+    if force_ipv4 && force_ipv6 {
+        bail!("Cannot force both IPv4 and IPv6 simultaneously");
+    }
+    
+    // If specific bind address is provided
+    if !bind_addr.is_empty() {
+        match bind_addr.parse::<IpAddr>() {
+            Ok(ip) => {
+                let addr = SocketAddr::new(ip, port as u16);
+                let s = FramedSocket::new_reuse(&addr, true, rmem).await?;
+                log::info!("UDP listening on specific address {:?}", s.local_addr());
+                return Ok(s);
+            }
+            Err(e) => {
+                bail!("Invalid bind address '{}': {}", bind_addr, e);
+            }
+        }
+    }
+    
+    // Force IPv4 only
+    if force_ipv4 {
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port as _);
+        let s = FramedSocket::new_reuse(&addr, true, rmem).await?;
+        log::info!("UDP listening on IPv4-only {:?} (forced)", s.local_addr());
         return Ok(s);
     }
+    
+    // Force IPv6 only
+    if force_ipv6 {
+        let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port as _);
+        let s = FramedSocket::new_reuse(&addr, true, rmem).await?;
+        log::info!("UDP listening on IPv6-only {:?} (forced)", s.local_addr());
+        return Ok(s);
+    }
+    
+    // Default behavior: Try dual-stack first (IPv6 with IPv4 compatibility)
+    let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port as _);
+    match FramedSocket::new_reuse(&addr, true, rmem).await {
+        Ok(s) => {
+            log::info!("UDP listening on dual-stack {:?}", s.local_addr());
+            return Ok(s);
+        }
+        Err(e) => {
+            log::warn!("Failed to bind UDP dual-stack on port {}: {}", port, e);
+        }
+    }
+    
+    // Fallback to IPv4-only
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port as _);
-    let s = FramedSocket::new_reuse(&addr, true, rmem).await?;
-    log::debug!("listen on udp {:?}", s.local_addr());
-    Ok(s)
+    match FramedSocket::new_reuse(&addr, true, rmem).await {
+        Ok(s) => {
+            log::info!("UDP listening on IPv4-only {:?}", s.local_addr());
+            Ok(s)
+        }
+        Err(e) => {
+            log::error!("Failed to bind UDP on any address for port {}: {}", port, e);
+            Err(e.into())
+        }
+    }
 }
 
 #[inline]
 async fn create_tcp_listener(port: i32) -> ResultType<TcpListener> {
+    // Check command line flags
+    let ip_version = crate::common::get_arg("ip");
+    let force_ipv4 = ip_version == "4";
+    let force_ipv6 = ip_version == "6"; 
+    let bind_addr = crate::common::get_arg("bind-addr");
+    
+    // If specific bind address is provided
+    if !bind_addr.is_empty() {
+        match bind_addr.parse::<IpAddr>() {
+            Ok(ip) => {
+                let addr = SocketAddr::new(ip, port as u16);
+                let socket = std::net::TcpListener::bind(addr)?;
+                socket.set_nonblocking(true)?;
+                let s = TcpListener::from_std(socket)?;
+                log::info!("TCP listening on specific address {:?}", s.local_addr());
+                return Ok(s);
+            }
+            Err(e) => {
+                bail!("Invalid bind address '{}': {}", bind_addr, e);
+            }
+        }
+    }
+    
+    if force_ipv4 {
+        // Force IPv4 only
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port as u16);
+        let socket = std::net::TcpListener::bind(addr)?;
+        socket.set_nonblocking(true)?;
+        let s = TcpListener::from_std(socket)?;
+        log::info!("TCP listening on IPv4-only {:?} (forced)", s.local_addr());
+        return Ok(s);
+    }
+    
+    if force_ipv6 {
+        // Force IPv6 only
+        let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port as u16);
+        let socket = std::net::TcpListener::bind(addr)?;
+        socket.set_nonblocking(true)?;
+        let s = TcpListener::from_std(socket)?;
+        log::info!("TCP listening on IPv6-only {:?} (forced)", s.local_addr());
+        return Ok(s);
+    }
+    
+    // Default: use dual-stack
     let s = listen_any(port as _).await?;
-    log::debug!("listen on tcp {:?}", s.local_addr());
+    log::info!("TCP listening on dual-stack {:?}", s.local_addr());
     Ok(s)
 }
